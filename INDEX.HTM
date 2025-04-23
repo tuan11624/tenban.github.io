@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản Lý Thời Gian Sinh Viên</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Poppins', sans-serif; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .menu-hidden { opacity: 0; pointer-events: none; }
+    .menu-visible { opacity: 1; pointer-events: auto; }
+    .event-card { transition: transform 0.2s, opacity 0.3s; }
+    .event-card:hover { transform: scale(1.05); }
+    .event-card.new { animation: slideIn 0.5s; }
+    @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes blink { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.1); } }
+    @keyframes wagTail { 0%, 100% { transform: rotate(5deg); } 50% { transform: rotate(-5deg); } }
+    @keyframes typing { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    #chatbot-img { animation: blink 2s infinite, wagTail 1s infinite; }
+    #calendarList { max-height: 300px; overflow-y: auto; }
+    .popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); z-index: 1000; }
+    .popup.show { display: block; }
+    .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
+    .overlay.show { display: block; }
+    .spinner { animation: spin 1s linear infinite; display: inline-block; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .intro-img { transition: transform 0.3s; }
+    .intro-img:hover { transform: scale(1.05); }
+    .typing-indicator { display: inline-block; }
+    .typing-indicator span { animation: typing 0.5s infinite; }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    .fc-daygrid-event:hover { transform: scale(1.1); transition: transform 0.2s; }
+    .services-section h3 { font-size: 1.1rem; }
+    .services-section p, .services-section label, .services-section select, .services-section input, .services-section textarea, .services-section button { font-size: 0.85rem; }
+    .services-section .grid { gap: 2rem; }
+    .services-section .p-6 { padding: 2rem; }
+    .toggle-hidden { display: none; }
+    .toggle-visible { display: block; }
+  </style>
+</head>
+<body class="bg-pink-50">
+  <!-- Header -->
+  <header class="bg-blue-500 text-white p-4 sticky top-0 z-20 flex items-center justify-between">
+    <div class="flex items-center">
+      <button id="menuToggle" class="text-2xl mr-4">☰</button>
+      <img src="https://www.utc2.edu.vn/images/logo_utc2.png" alt="Logo UTH" class="w-12 h-12" onerror="this.src='https://via.placeholder.com/48?text=Logo'">
+      <h1 class="text-2xl font-bold ml-2">Quản Lý Thời Gian</h1>
+    </div>
+  </header>
+
+  <!-- Menu ẩn -->
+  <nav id="menu" class="bg-white w-64 fixed h-full shadow-lg z-10 transition-opacity duration-300 menu-hidden">
+    <ul class="flex flex-col p-4">
+      <li><a href="#" onclick="showPage('home')" class="block py-2 px-4 text-blue-600 hover:bg-blue-100 rounded">Trang chủ</a></li>
+      <li><a href="#" onclick="showPage('services')" class="block py-2 px-4 text-blue-600 hover:bg-blue-100 rounded">Dịch vụ</a></li>
+      <li><a href="#" onclick="showPage('consulting')" class="block py-2 px-4 text-blue-600 hover:bg-blue-100 rounded">Tư vấn</a></li>
+      <li><a href="#" onclick="showPage('contact')" class="block py-2 px-4 text-blue-600 hover:bg-blue-100 rounded">Liên hệ</a></li>
+    </ul>
+  </nav>
+
+  <!-- Nội dung chính -->
+  <main class="p-8">
+    <!-- Trang chủ -->
+    <section id="home" class="page active">
+      <h2 class="text-3xl font-bold text-gray-800 mb-4">Chào mừng bạn!</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <img src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=400&auto=format&fit=crop" alt="Sinh viên học nhóm" class="w-full h-48 object-cover rounded-lg intro-img" loading="lazy" onerror="this.src='https://via.placeholder.com/400x256?text=Image+Error'">
+            <img src="https://images.unsplash.com/photo-1511632765486-a01980e01df4?q=80&w=400&auto=format&fit=crop" alt="Sinh viên thư giãn" class="w-full h-48 object-cover rounded-lg mt-4 intro-img" loading="lazy" onerror="this.src='https://via.placeholder.com/400x256?text=Image+Error'">
+            <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=400&auto=format&fit=crop" alt="Sinh viên viết kế hoạch" class="w-full h-48 object-cover rounded-lg mt-4 intro-img" loading="lazy" onerror="this.src='https://via.placeholder.com/400x256?text=Image+Error'">
+          </div>
+          <div>
+            <img src="https://images.unsplash.com/photo-1503676260728-9541f71385b5?q=80&w=400&auto=format&fit=crop" alt="Sinh viên ghi chú" class="w-full h-48 object-cover rounded-lg intro-img" loading="lazy" onerror="this.src='https://via.placeholder.com/400x256?text=Image+Error'">
+            <img src="https://images.unsplash.com/photo-1456513080510-5a20856a2d6d?q=80&w=400&auto=format&fit=crop" alt="Sinh viên đọc sách" class="w-full h-48 object-cover rounded-lg mt-4 intro-img" loading="lazy" onerror="this.src='https://via.placeholder.com/400x256?text=Image+Error'">
+          </div>
+        </div>
+        <div>
+          <h3 class="text-xl font-semibold text-gray-800">Giới thiệu</h3>
+          <p class="mt-2 text-gray-600">Trang web này giúp sinh viên quản lý thời gian hiệu quả, từ học tập, làm việc nhóm đến thư giãn. Công cụ miễn phí và tư vấn thân thiện sẽ đồng hành cùng bạn!</p>
+          <h3 class="text-xl font-semibold text-gray-800 mt-4">Quản lý thời gian là gì?</h3>
+          <p class="mt-2 text-gray-600">Là kỹ năng lập kế hoạch, phân bổ thời gian hợp lý để hoàn thành công việc. Điều này giúp bạn học tập hiệu quả, giảm căng thẳng và tận hưởng cuộc sống.</p>
+          <h3 class="text-xl font-semibold text-gray-800 mt-4">Lợi ích</h3>
+          <ul class="mt-2 text-gray-600 list-disc pl-5">
+            <li>Nâng cao năng suất học tập.</li>
+            <li>Giảm áp lực từ deadline.</li>
+            <li>Cân bằng giữa học và chơi.</li>
+            <li>Phát triển kỷ luật bản thân.</li>
+          </ul>
+          <h3 class="text-xl font-semibold text-gray-800 mt-4">Ưu và nhược điểm</h3>
+          <p class="mt-2 text-gray-600"><strong>Ưu điểm:</strong> Miễn phí, dễ dùng, linh hoạt.<br><strong>Nhược điểm:</strong> Cần kiên trì để duy trì thói quen.</p>
+          <h3 class="text-xl font-semibold text-gray-800 mt-4">Mẹo quản lý thời gian</h3>
+          <ul class="mt-2 text-gray-600 list-disc pl-5">
+            <li>Sử dụng quy tắc 80/20: 20% công việc tạo 80% kết quả.</li>
+            <li>Áp dụng Pomodoro: Học 25 phút, nghỉ 5 phút.</li>
+            <li>Ưu tiên việc quan trọng (Ma trận Eisenhower).</li>
+            <li>Ghi chú hàng ngày để theo dõi tiến độ.</li>
+            <li>Đặt mục tiêu nhỏ mỗi ngày để duy trì động lực.</li>
+          </ul>
+          <h3 class="text-xl font-semibold text-gray-800 mt-4">Trích dẫn truyền cảm hứng</h3>
+          <p class="mt-2 text-gray-600 italic">“Thời gian là vàng, hãy biến nó thành kim cương!”</p>
+          <p class="mt-2 text-gray-600 italic">“Mỗi ngày là một cơ hội để tiến gần hơn đến ước mơ!”</p>
+          <p class="mt-2 text-gray-600 italic">“Hãy bắt đầu từ những bước nhỏ, thành công sẽ đến!”</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dịch vụ -->
+    <section id="services" class="page">
+      <h2 class="text-3xl font-bold text-gray-800 mb-4">Lịch Sinh Viên Dễ Thương</h2>
+      <div class="bg-white p-6 rounded-lg shadow-md services-section">
+        <h3 class="font-semibold text-gray-800">Tạo sự kiện mới</h3>
+        <p class="mt-2 text-gray-600">Thêm công việc, học tập hoặc hoạt động cá nhân với mức độ ưu tiên. Hệ thống sẽ cảnh báo nếu lịch bị trùng!</p>
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <input id="eventName" type="text" class="w-full p-2 border rounded" placeholder="Tên sự kiện...">
+            <input id="eventTime" type="datetime-local" class="w-full p-2 border rounded mt-2">
+            <select id="eventPriority" class="w-full p-2 border rounded mt-2">
+              <option value="bg-red-500">GẤP</option>
+              <option value="bg-yellow-400">CẦN CHUẨN BỊ</option>
+              <option value="bg-green-400">CHƯA GẤP</option>
+            </select>
+            <textarea id="eventNote" class="w-full p-2 border rounded mt-2" placeholder="Ghi chú (ví dụ: Chuẩn bị tài liệu)"></textarea>
+            <button onclick="addEvent()" class="mt-2 bg-blue-500 text-white p-2 rounded flex items-center"><span class="mr-2 spinner">⏳</span>Thêm sự kiện</button>
+          </div>
+          <div>
+            <h4 class="text-lg font-semibold text-gray-800">Lịch của bạn</h4>
+            <div id="calendar" class="mt-2"></div>
+            <div class="flex justify-between mt-4">
+              <button onclick="toggleEventList()" class="bg-blue-300 text-white p-2 rounded flex items-center">
+                <span class="mr-2">📅</span> Danh sách sự kiện
+              </button>
+              <button onclick="toggleOptions()" class="bg-blue-300 text-white p-2 rounded flex items-center">
+                <span class="mr-2">⚙️</span> Tùy chọn
+              </button>
+            </div>
+            <div id="eventOptions" class="toggle-hidden mt-2">
+              <div class="flex justify-between mb-2">
+                <button onclick="sortEvents('time')" class="bg-blue-300 text-white p-2 rounded">Sắp xếp theo thời gian</button>
+                <button onclick="sortEvents('priority')" class="bg-blue-300 text-white p-2 rounded">Sắp xếp theo ưu tiên</button>
+              </div>
+              <div class="flex justify-between">
+                <select id="filterPriority" onchange="filterEvents()" class="p-2 border rounded">
+                  <option value="all">Tất cả</option>
+                  <option value="bg-red-500">GẤP</option>
+                  <option value="bg-yellow-400">CẦN CHUẨN BỊ</option>
+                  <option value="bg-green-400">CHƯA GẤP</option>
+                </select>
+                <button onclick="clearEvents()" class="bg-red-500 text-white p-2 rounded">Xóa tất cả</button>
+              </div>
+            </div>
+            <div id="calendarList" class="toggle-hidden mt-2"></div>
+          </div>
+        </div>
+      </div>
+      <div id="overlay" class="overlay"></div>
+      <div id="popup" class="popup">
+        <p class="text-red-500">Lịch bị trùng! Vui lòng chọn thời gian khác.</p>
+        <button onclick="closePopup()" class="mt-2 bg-blue-500 text-white p-2 rounded">Đóng</button>
+      </div>
+    </section>
+
+    <!-- Tư vấn -->
+    <section id="consulting" class="page">
+      <h2 class="text-3xl font-bold text-gray-800 mb-4">Hỏi Mèo Thời Gian!</h2>
+      <div class="bg-white p-6 rounded-lg shadow-md flex">
+        <img id="chatbot-img" src="https://images.unsplash.com/photo-1573865526739-10659fec78a5?q=80&w=100&auto=format&fit=crop" alt="Mèo dễ thương" class="w-24 h-24 rounded-full mr-4 transition-transform hover:scale-110" loading="lazy" onerror="this.src='https://via.placeholder.com/100?text=Cat'">
+        <div class="flex-1">
+          <p class="text-gray-600 mb-2">Meo meo! Mình là Mèo Thời Gian, bạn cứ nói những gì đang lo lắng, mình sẽ giúp nhé! 😺 Bạn đang bận, căng thẳng hay cần lập kế hoạch?</p>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <button onclick="quickQuestion('Tội bận quá!')" class="bg-pink-300 text-white p-2 rounded">Tội bận quá!</button>
+            <button onclick="quickQuestion('Tội căng thẳng!')" class="bg-blue-300 text-white p-2 rounded">Tội căng thẳng!</button>
+            <button onclick="quickQuestion('Cân bằng học & chơi?')" class="bg-purple-300 text-white p-2 rounded">Cân bằng học & chơi?</button>
+            <button onclick="quickQuestion('Tội mệt mỏi!')" class="bg-yellow-300 text-white p-2 rounded">Tội mệt mỏi!</button>
+            <button onclick="quickQuestion('Tội cần kế hoạch học!')" class="bg-green-300 text-white p-2 rounded">Cần kế hoạch học!</button>
+            <button onclick="quickQuestion('Tội cần động lực!')" class="bg-orange-300 text-white p-2 rounded">Cần động lực!</button>
+            <button onclick="quickQuestion('Tội không tập trung!')" class="bg-teal-300 text-white p-2 rounded">Không tập trung!</button>
+            <button onclick="quickQuestion('Tội cần giải pháp học tập!')" class="bg-indigo-300 text-white p-2 rounded">Giải pháp học tập!</button>
+            <button onclick="quickQuestion('Tội cần giải pháp giảm căng thẳng!')" class="bg-red-300 text-white p-2 rounded">Giải pháp giảm căng thẳng!</button>
+            <button onclick="quickQuestion('Tội lo lắng thi cử!')" class="bg-gray-300 text-white p-2 rounded">Lo lắng thi cử!</button>
+            <button onclick="quickQuestion('Tội cần giải pháp quản lý thời gian!')" class="bg-pink-500 text-white p-2 rounded">Giải pháp quản lý thời gian!</button>
+          </div>
+          <div id="chatbox" class="h-64 overflow-y-auto mb-4 p-2 border rounded"></div>
+          <input id="userInput" type="text" class="w-full p-2 border rounded" placeholder="Hỏi mình bất cứ điều gì nhé!">
+          <button onclick="sendMessage()" class="mt-2 bg-blue-500 text-white p-2 rounded">Gửi</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Liên hệ -->
+    <section id="contact" class="page">
+      <h2 class="text-3xl font-bold text-gray-800 mb-4">Liên hệ với chúng tôi</h2>
+      <div class="bg-white p-6 rounded-lg shadow-md">
+        <p class="text-gray-600"><strong>Email:</strong> <a href="mailto:nhttuan092509@gmail.com">nhttuan092509@gmail.com</a></p>
+        <p class="text-gray-600"><strong>Số điện thoại:</strong> 098888888</p>
+        <h3 class="text-xl font-semibold text-gray-800 mt-4">Để lại lời nhắn</h3>
+        <textarea id="feedbackInput" class="w-full p-2 border rounded mt-2" placeholder="Lời nhắn của bạn..."></textarea>
+        <select id="feedbackRating" class="w-full p-2 border rounded mt-2">
+          <option value="positive">Hài lòng</option>
+          <option value="neutral">Bình thường</option>
+          <option value="negative">Chưa hài lòng</option>
+        </select>
+        <button onclick="submitFeedback()" class="mt-2 bg-blue-500 text-white p-2 rounded">Gửi</button>
+        <div id="recentFeedback" class="mt-4"></div>
+        <canvas id="feedbackChart" class="mt-4"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // Menu ẩn/hiện
+    const menuToggle = document.getElementById('menuToggle');
+    const menu = document.getElementById('menu');
+    menuToggle.addEventListener('click', () => {
+      menu.classList.toggle('menu-hidden');
+      menu.classList.toggle('menu-visible');
+    });
+
+    // Chuyển trang
+    function showPage(pageId) {
+      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+      document.getElementById(pageId).classList.add('active');
+      menu.classList.add('menu-hidden');
+      menu.classList.remove('menu-visible');
+      if (pageId === 'services') {
+        calendar.render();
+      }
+      if (pageId === 'consulting') {
+        document.getElementById('chatbox').innerHTML = '<p><strong>Mèo Thời Gian:</strong> Meo meo! Mình là Mèo Thời Gian, bạn cứ nói những gì đang lo lắng, mình sẽ giúp nhé! 😺 Bạn đang bận, căng thẳng hay cần lập kế hoạch?</p>';
+      }
+    }
+    showPage('home');
+
+    // Quản lý sự kiện
+    let events = JSON.parse(localStorage.getItem('events')) || [];
+    const calendarEl = document.getElementById('calendar');
+    const calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: 'dayGridMonth',
+      height: 'auto',
+      events: events.map(event => ({
+        title: event.name,
+        start: event.time,
+        backgroundColor: event.priority === 'bg-red-500' ? '#EF4444' : event.priority === 'bg-yellow-400' ? '#FBBF24' : '#34D399',
+        borderColor: event.priority === 'bg-red-500' ? '#EF4444' : event.priority === 'bg-yellow-400' ? '#FBBF24' : '#34D399',
+        extendedProps: { note: event.note }
+      })),
+      eventClick: function(info) {
+        if (confirm(`Xóa sự kiện "${info.event.title}"?`)) {
+          events = events.filter(e => e.time !== info.event.startStr);
+          localStorage.setItem('events', JSON.stringify(events));
+          info.event.remove();
+          renderCalendarList();
+        }
+      }
+    });
+    calendar.render();
+
+    function addEvent() {
+      const name = document.getElementById('eventName').value;
+      const time = document.getElementById('eventTime').value;
+      const priority = document.getElementById('eventPriority').value;
+      const note = document.getElementById('eventNote').value;
+      if (!name || !time) {
+        showPopup('Vui lòng nhập đầy đủ thông tin!');
+        return;
+      }
+
+      const conflict = events.some(event => event.time === time);
+      if (conflict) {
+        showPopup('Lịch bị trùng! Vui lòng chọn thời gian khác.');
+        return;
+      }
+
+      events.push({ name, time, priority, note });
+      localStorage.setItem('events', JSON.stringify(events));
+      calendar.getEvents().forEach(event => event.remove());
+      events.forEach(event => {
+        calendar.addEvent({
+          title: event.name,
+          start: event.time,
+          backgroundColor: event.priority === 'bg-red-500' ? '#EF4444' : event.priority === 'bg-yellow-400' ? '#FBBF24' : '#34D399',
+          borderColor: event.priority === 'bg-red-500' ? '#EF4444' : event.priority === 'bg-yellow-400' ? '#FBBF24' : '#34D399',
+          extendedProps: { note: event.note }
+        });
+      });
+      renderCalendarList();
+      document.getElementById('eventName').value = '';
+      document.getElementById('eventTime').value = '';
+      document.getElementById('eventNote').value = '';
+    }
+
+    function showPopup(message) {
+      document.getElementById('popup').innerHTML = `
+        <p class="text-red-500">${message}</p>
+        <button onclick="closePopup()" class="mt-2 bg-blue-500 text-white p-2 rounded">Đóng</button>
+      `;
+      document.getElementById('popup').classList.add('show');
+      document.getElementById('overlay').classList.add('show');
+    }
+
+    function closePopup() {
+      document.getElementById('popup').classList.remove('show');
+      document.getElementById('overlay').classList.remove('show');
+    }
+
+    function renderCalendarList() {
+      const calendarList = document.getElementById('calendarList');
+      const filterPriority = document.getElementById('filterPriority').value;
+      calendarList.innerHTML = '';
+      let filteredEvents = events;
+      if (filterPriority !== 'all') {
+        filteredEvents = events.filter(event => event.priority === filterPriority);
+      }
+      filteredEvents.slice(0, 20).forEach((event, index) => {
+        const div = document.createElement('div');
+        div.className = `event-card p-3 rounded ${event.priority} text-white flex justify-between items-center shadow-lg new`;
+        div.innerHTML = `
+          <div>
+            <span class="mr-2">${event.priority === 'bg-red-500' ? '🚨' : event.priority === 'bg-yellow-400' ? '📝' : '🌟'}</span> 
+            ${event.name} (${event.priority === 'bg-red-500' ? 'GẤP' : event.priority === 'bg-yellow-400' ? 'CẦN CHUẨN BỊ' : 'CHƯA GẤP'}) - ${new Date(event.time).toLocaleString()}
+            ${event.note ? `<br><small>Ghi chú: ${event.note}</small>` : ''}
+          </div>
+          <button onclick="deleteEvent(${index})" class="bg-gray-700 text-white p-1 rounded">✕</button>
+        `;
+        calendarList.appendChild(div);
+      });
+    }
+
+    function deleteEvent(index) {
+      events.splice(index, 1);
+      localStorage.setItem('events', JSON.stringify(events));
+      calendar.getEvents().forEach(event => event.remove());
+      events.forEach(event => {
+        calendar.addEvent({
+          title: event.name,
+          start: event.time,
+          backgroundColor: event.priority === 'bg-red-500' ? '#EF4444' : event.priority === 'bg-yellow-400' ? '#FBBF24' : '#34D399',
+          borderColor: event.priority === 'bg-red-500' ? '#EF4444' : event.priority === 'bg-yellow-400' ? '#FBBF24' : '#34D399',
+          extendedProps: { note: event.note }
+        });
+      });
+      renderCalendarList();
+    }
+
+    function sortEvents(criteria) {
+      if (criteria === 'time') {
+        events.sort((a, b) => new Date(a.time) - new Date(b.time));
+      } else if (criteria === 'priority') {
+        const priorityOrder = { 'bg-red-500': 1, 'bg-yellow-400': 2, 'bg-green-400': 3 };
+        events.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
+      }
+      localStorage.setItem('events', JSON.stringify(events));
+      calendar.getEvents().forEach(event => event.remove());
+      events.forEach(event => {
+        calendar.addEvent({
+          title: event.name,
+          start: event.time,
+          backgroundColor: event.priority === 'bg-red-500' ? '#EF4444' : event.priority === 'bg-yellow-400' ? '#FBBF24' : '#34D399',
+          borderColor: event.priority === 'bg-red-500' ? '#EF4444' : event.priority === 'bg-yellow-400' ? '#FBBF24' : '#34D399',
+          extendedProps: { note: event.note }
+        });
+      });
+      renderCalendarList();
+    }
+
+    function filterEvents() {
+      renderCalendarList();
+    }
+
+    function clearEvents() {
+      if (confirm('Bạn có chắc muốn xóa tất cả sự kiện?')) {
+        events = [];
+        localStorage.setItem('events', JSON.stringify(events));
+        calendar.getEvents().forEach(event => event.remove());
+        renderCalendarList();
+      }
+    }
+
+    function toggleEventList() {
+      const eventList = document.getElementById('calendarList');
+      eventList.classList.toggle('toggle-hidden');
+      eventList.classList.toggle('toggle-visible');
+      renderCalendarList();
+    }
+
+    function toggleOptions() {
+      const options = document.getElementById('eventOptions');
+      options.classList.toggle('toggle-hidden');
+      options.classList.toggle('toggle-visible');
+    }
+
+    // Chatbot cải tiến
+    let chatHistory = [];
+    let currentTopic = '';
+    let lastSuggestion = '';
+    const responses = {
+      greeting: ['Meo meo! Mình là Mèo Thời Gian, bạn cứ nói những gì đang lo lắng, mình sẽ giúp nhé! 😺 Bạn đang bận, căng thẳng hay cần lập kế hoạch?'],
+      busy: [
+        'Meow! Bạn bận rộn quá nhỉ? 😿 Sao không thử chia nhỏ công việc và làm từng phần một? Cảm giác sẽ nhẹ nhàng hơn đó!',
+        'Mèo đây! Nghe bạn bận dữ ha! 😺 Hãy thử dùng Ma trận Eisenhower để ưu tiên việc quan trọng trước nhé!'
+      ],
+      busyAlt: [
+        'Meo meo! Nếu cách trước không hợp, bạn thử đặt hẹn giờ 25 phút làm việc, 5 phút nghỉ (Pomodoro) xem sao? 😺',
+        'Mèo đây! Vậy bạn thử tắt hết thông báo điện thoại để tập trung hơn nhé? 😺 Cảm giác thế nào?'
+      ],
+      stress: [
+        'Meow! Nghe bạn căng thẳng quá, mình ở đây nè! 😺 Sao không thử hít thở sâu: hít 4 giây, giữ 7 giây, thở ra 8 giây? Cảm giác nhẹ nhàng hơn chưa?',
+        'Mèo đây! Bạn áp lực quá hả? 😿 Hãy thử đi dạo 10 phút để đầu óc thư giãn nhé!'
+      ],
+      stressAlt: [
+        'Meo meo! Nếu thế chưa ổn, bạn thử nghe một bản nhạc nhẹ nhàng xem? 😺 Có thấy dễ chịu hơn không?',
+        'Mèo đây! Vậy bạn thử viết cảm xúc ra giấy để giải tỏa nhé? 😺 Cảm giác thế nào?'
+      ],
+      balance: [
+        'Meow! Cân bằng học và chơi hả? 😺 Hãy thử chia thời gian: 60% học, 20% chơi, 20% nghỉ. Bạn thấy hợp không?',
+        'Mèo đây! Bạn muốn cân bằng tốt hơn đúng không? 😺 Sao không đặt lịch cố định: học 2 tiếng rồi thư giãn 30 phút?'
+      ],
+      balanceAlt: [
+        'Meo meo! Nếu chưa hợp, bạn thử tự thưởng sau khi học xong, như xem phim 20 phút? 😺 Có ổn hơn không?',
+        'Mèo đây! Vậy bạn thử xen kẽ học và chơi: 1 tiếng học, 15 phút chơi, để đỡ chán nhé? 😺'
+      ],
+      tired: [
+        'Meow! Bạn mệt mỏi hả? Nghỉ chút đi, bạn xứng đáng mà! 😺 Thử ngủ ngắn 15-20 phút (power nap) nhé?',
+        'Mèo đây! Nghe bạn kiệt sức quá! 😿 Uống một cốc nước và ăn nhẹ, như một quả táo, để nạp năng lượng nhé!'
+      ],
+      tiredAlt: [
+        'Meo meo! Nếu chưa đủ, bạn thử nghe một bài nhạc yêu thích để refresh tinh thần xem? 😺 Có thấy tốt hơn không?',
+        'Mèo đây! Vậy bạn thử đứng dậy vươn vai và đi lại 5 phút để cơ thể tỉnh táo hơn nhé? 😺'
+      ],
+      plan: [
+        'Meow! Muốn lập kế hoạch hả? 😺 Hãy thử đặt mục tiêu nhỏ: mỗi ngày học 1 chương, và ghi vào lịch để theo dõi!',
+        'Mèo đây! Bạn cần kế hoạch đúng không? 😺 Sao không chia nhỏ công việc, mỗi ngày làm 1 phần thôi để đỡ áp lực?'
+      ],
+      planAlt: [
+        'Meo meo! Nếu chưa hợp, bạn thử dành 10 phút mỗi tối để lên kế hoạch cho ngày mai nhé? 😺 Có thấy dễ hơn không?',
+        'Mèo đây! Vậy bạn thử dùng sổ tay để ghi chú công việc và đánh dấu khi hoàn thành? 😺'
+      ],
+      relax: [
+        'Meow! Cần thư giãn hả? 😺 Hãy thử xem một video vui trên YouTube, hoặc nghe một bài nhạc chill nhé!',
+        'Mèo đây! Muốn thư giãn đúng không? 😺 Sao không thử vẽ nguệch ngoạc hoặc viết nhật ký để đầu óc thoải mái hơn?'
+      ],
+      relaxAlt: [
+        'Meo meo! Nếu chưa ổn, bạn thử ngồi thiền 5 phút, tập trung vào hơi thở xem? 😺 Cảm giác thế nào?',
+        'Mèo đây! Vậy bạn thử nghe podcast nhẹ nhàng hoặc tiếng mưa rơi để thư giãn nhé? 😺'
+      ],
+      study: [
+        'Meow! Học hành khó khăn hả? 😿 Hãy thử chia nhỏ bài học, mỗi ngày 1 phần, và ghi chú bằng sơ đồ tư duy nhé!',
+        'Mèo đây! Bạn muốn học tốt hơn đúng không? 😺 Sao không thử phương pháp Feynman: giải thích bài như dạy người khác?'
+      ],
+      studyAlt: [
+        'Meo meo! Nếu chưa hợp, bạn thử đặt hẹn giờ 25 phút học, 5 phút nghỉ (Pomodoro) để giữ tập trung nhé? 😺',
+        'Mèo đây! Vậy bạn thử học ở nơi yên tĩnh, không có đồ gây xao nhãng xem? 😺 Có thấy dễ hơn không?'
+      ],
+      motivation: [
+        'Meow! Cần động lực hả? Bạn giỏi lắm, cứ tiến từng bước nhỏ là được! 😺 Hãy thử đặt mục tiêu nhỏ, như học 1 trang, rồi tự thưởng nhé!',
+        'Mèo đây! Nghe bạn chán học nhỉ? 😿 Sao không thử nhớ lại lý do bạn bắt đầu, và tự nhủ bạn đang tiến bộ mỗi ngày?'
+      ],
+      motivationAlt: [
+        'Meo meo! Nếu chưa đủ động lực, bạn thử tự thưởng sau khi học xong, như ăn một thanh kẹo? 😺 Có thấy hứng thú hơn không?',
+        'Mèo đây! Vậy bạn thử xem một video truyền cảm hứng, hoặc đọc quote tích cực xem? 😺'
+      ],
+      focus: [
+        'Meow! Không tập trung được hả? 😿 Hãy thử để điện thoại xa một chút, và học ở nơi yên tĩnh nhé!',
+        'Mèo đây! Bạn bị phân tâm đúng không? 😺 Sao không thử đặt hẹn giờ 25 phút tập trung, rồi nghỉ 5 phút?'
+      ],
+      focusAlt: [
+        'Meo meo! Nếu vẫn khó tập trung, bạn thử dùng ứng dụng chặn mạng xã hội trong 1 giờ xem? 😺 Có ổn hơn không?',
+        'Mèo đây! Vậy bạn thử dọn sạch bàn học, để không có đồ gây xao nhãng nhé? 😺'
+      ],
+      schedule: [
+        'Meow! Cần lịch học hả? 😺 Hãy thử chia thời gian: mỗi môn 1-2 giờ/ngày, xen kẽ môn khó và dễ để đỡ chán!',
+        'Mèo đây! Bạn muốn lập lịch học đúng không? 😺 Sao không thử học môn khó vào buổi sáng, khi đầu óc tỉnh táo nhất?'
+      ],
+      scheduleAlt: [
+        'Meo meo! Nếu chưa hợp, bạn thử dành 30 phút cuối ngày để ôn lại tất cả nhé? 😺 Có thấy hiệu quả hơn không?',
+        'Mèo đây! Vậy bạn thử đặt thời gian cố định cho từng môn, như Toán 8h-9h, Anh 9h-10h xem? 😺'
+      ],
+      sad: [
+        'Meow! Bạn buồn hả? Mình ở đây với bạn nè! 😺 Hãy thử nói chuyện với một người bạn thân, hoặc nghe nhạc yêu thích nhé!',
+        'Mèo đây! Nghe bạn không vui nhỉ? 😿 Sao không thử làm việc bạn thích, như xem phim hoặc ăn món yêu thích?'
+      ],
+      sadAlt: [
+        'Meo meo! Nếu chưa vui hơn, bạn thử viết cảm xúc ra giấy, hoặc đi dạo một chút xem? 😺 Cảm giác thế nào?',
+        'Mèo đây! Vậy bạn thử xem một video hài, hoặc chơi với thú cưng nếu có nhé? 😺'
+      ],
+      examStress: [
+        'Meow! Lo lắng thi cử hả? Đừng lo, mình giúp bạn! 😺 Hãy thử ôn tập mỗi ngày 1-2 chương, và ngủ đủ giấc, đừng thức khuya nhé!',
+        'Mèo đây! Bạn áp lực vì thi đúng không? 😿 Sao không thử thực hành đề thi thử để quen với áp lực?'
+      ],
+      examStressAlt: [
+        'Meo meo! Nếu vẫn lo, bạn thử hít thở sâu trước khi học: hít 4 giây, giữ 7 giây, thở ra 8 giây nhé? 😺 Có thấy bình tĩnh hơn không?',
+        'Mèo đây! Vậy bạn thử đặt mục tiêu nhỏ, như hôm nay ôn 1 chương thôi, để đỡ áp lực xem? 😺'
+      ],
+      timeManagement: [
+        'Meow! Cần quản lý thời gian hả? 😺 Hãy thử dùng Ma trận Eisenhower để ưu tiên việc quan trọng trước nhé!',
+        'Mèo đây! Bạn muốn quản lý thời gian tốt hơn đúng không? 😺 Sao không thử chia nhỏ công việc và đặt thời hạn rõ ràng?'
+      ],
+      timeManagementAlt: [
+        'Meo meo! Nếu chưa hợp, bạn thử đặt hẹn giờ 25 phút làm việc, 5 phút nghỉ (Pomodoro) xem? 😺 Có thấy hiệu quả hơn không?',
+        'Mèo đây! Vậy bạn thử ghi công việc vào sổ tay, và đánh dấu khi hoàn thành để dễ theo dõi nhé? 😺'
+      ],
+      overwhelmed: [
+        'Meow! Cảm thấy quá tải hả? Đừng lo, mình ở đây! 😺 Hãy thử liệt kê tất cả việc cần làm, rồi làm từng việc một nhé!',
+        'Mèo đây! Bạn bị ngập việc đúng không? 😿 Sao không thử nghỉ 5 phút sau mỗi 25 phút làm việc để đầu óc nhẹ nhàng hơn?'
+      ],
+      overwhelmedAlt: [
+        'Meo meo! Nếu vẫn khó, bạn thử làm từng việc một, đừng đa nhiệm nhé? 😺 Cảm giác thế nào?',
+        'Mèo đây! Vậy bạn thử giao bớt việc cho người khác, hoặc làm việc quan trọng nhất trước xem? 😺'
+      ],
+      procrastination: [
+        'Meow! Trì hoãn hả? Mình giúp bạn bắt đầu nhé! 😺 Hãy thử đặt hẹn giờ 5 phút để bắt đầu, chỉ làm việc nhỏ thôi!',
+        'Mèo đây! Bạn hay trì hoãn đúng không? 😿 Sao không thử bắt đầu bằng việc dễ nhất, như đọc 1 trang sách?'
+      ],
+      procrastinationAlt: [
+        'Meo meo! Nếu chưa bắt đầu được, bạn thử tự thưởng sau khi hoàn thành, như ăn snack yêu thích xem? 😺 Có thấy hứng thú hơn không?',
+        'Mèo đây! Vậy bạn thử đặt mục tiêu nhỏ, như làm 5 phút thôi, rồi tăng dần lên nhé? 😺'
+      ],
+      math: [
+        'Meow! Học môn toán hả? 😺 Hãy thử làm bài tập từ dễ đến khó, mỗi ngày 5-10 bài để quen dần nhé!',
+        'Mèo đây! Bạn muốn học toán tốt hơn đúng không? 😺 Sao không thử xem video giải thích trên YouTube nếu chưa hiểu?'
+      ],
+      mathAlt: [
+        'Meo meo! Nếu chưa hợp, bạn thử thực hành mỗi ngày 5-10 bài, và ghi chú các công thức quan trọng xem? 😺 Có thấy dễ hơn không?',
+        'Mèo đây! Vậy bạn thử học cùng bạn bè, hoặc nhờ thầy cô giải đáp chỗ khó nhé? 😺'
+      ],
+      yes: ['Meow! Vậy mình tiếp tục gợi ý nhé! 😺'],
+      no: [
+        'Meo meo! Vậy để mình gợi ý cách khác nhé! 😺',
+        'Mèo đây! Không sao, mình có ý khác cho bạn nè! 😺'
+      ],
+      default: [
+        'Meow! Mình chưa hiểu lắm, bạn nói thêm chút được không? 😺 Bạn đang lo về học tập, thời gian hay cảm xúc?',
+        'Mèo đây! Hình như mình chưa rõ ý bạn, bạn nói thêm nhé? 😺 Bạn cần giúp gì nào?'
+      ]
+    };
+
+    function quickQuestion(question) {
+      document.getElementById('userInput').value = question;
+      sendMessage();
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('userInput').value.toLowerCase();
+      const chatbox = document.getElementById('chatbox');
+      chatbox.innerHTML += `<p><strong>Bạn:</strong> ${input}</p>`;
+      chatbox.innerHTML += `<p><strong>Mèo Thời Gian:</strong> <span class="typing-indicator"><span>.</span><span>.</span><span>.</span></span></p>`;
+      chatbox.scrollTop = chatbox.scrollHeight;
+
+      setTimeout(() => {
+        let reply = responses.default[Math.floor(Math.random() * responses.default.length)];
+        let emotion = 'happy';
+        let suggestionIndex = 0;
+
+        // Quét từ khóa mở rộng
+        if (input.includes('bận') || input.includes('nhiều việc') || input.includes('deadline') || input.includes('quá tải')) {
+          reply = responses.busy[suggestionIndex = Math.floor(Math.random() * responses.busy.length)];
+          currentTopic = 'busy';
+          emotion = 'sad';
+          lastSuggestion = 'busy' + suggestionIndex;
+        } else if (input.includes('căng thẳng') || input.includes('áp lực') || input.includes('stress') || input.includes('lo lắng')) {
+          reply = responses.stress[suggestionIndex = Math.floor(Math.random() * responses.stress.length)];
+          currentTopic = 'stress';
+          emotion = 'worried';
+          lastSuggestion = 'stress' + suggestionIndex;
+        } else if (input.includes('cân bằng') || input.includes('học và chơi') || input.includes('học với chơi')) {
+          reply = responses.balance[suggestionIndex = Math.floor(Math.random() * responses.balance.length)];
+          currentTopic = 'balance';
+          lastSuggestion = 'balance' + suggestionIndex;
+        } else if (input.includes('mệt mỏi') || input.includes('kiệt sức') || input.includes('mệt')) {
+          reply = responses.tired[suggestionIndex = Math.floor(Math.random() * responses.tired.length)];
+          currentTopic = 'tired';
+          emotion = 'sad';
+          lastSuggestion = 'tired' + suggestionIndex;
+        } else if (input.includes('kế hoạch') || input.includes('quản lý') || input.includes('lịch') || input.includes('lên kế hoạch')) {
+          reply = responses.plan[suggestionIndex = Math.floor(Math.random() * responses.plan.length)];
+          currentTopic = 'plan';
+          lastSuggestion = 'plan' + suggestionIndex;
+        } else if (input.includes('thư giãn') || input.includes('nghỉ ngơi') || input.includes('thoải mái')) {
+          reply = responses.relax[suggestionIndex = Math.floor(Math.random() * responses.relax.length)];
+          currentTopic = 'relax';
+          lastSuggestion = 'relax' + suggestionIndex;
+        } else if (input.includes('học') || input.includes('bài tập') || input.includes('học tốt') || input.includes('kiến thức')) {
+          reply = responses.study[suggestionIndex = Math.floor(Math.random() * responses.study.length)];
+          currentTopic = 'study';
+          emotion = 'sad';
+          lastSuggestion = 'study' + suggestionIndex;
+        } else if (input.includes('động lực') || input.includes('chán') || input.includes('không muốn học') || input.includes('mục tiêu')) {
+          reply = responses.motivation[suggestionIndex = Math.floor(Math.random() * responses.motivation.length)];
+          currentTopic = 'motivation';
+          emotion = 'excited';
+          lastSuggestion = 'motivation' + suggestionIndex;
+        } else if (input.includes('tập trung') || input.includes('phân tâm') || input.includes('xao nhãng')) {
+          reply = responses.focus[suggestionIndex = Math.floor(Math.random() * responses.focus.length)];
+          currentTopic = 'focus';
+          emotion = 'thinking';
+          lastSuggestion = 'focus' + suggestionIndex;
+        } else if (input.includes('lịch học') || input.includes('học theo lịch')) {
+          reply = responses.schedule[suggestionIndex = Math.floor(Math.random() * responses.schedule.length)];
+          currentTopic = 'schedule';
+          lastSuggestion = 'schedule' + suggestionIndex;
+        } else if (input.includes('buồn') || input.includes('không vui') || input.includes('chán nản')) {
+          reply = responses.sad[suggestionIndex = Math.floor(Math.random() * responses.sad.length)];
+          currentTopic = 'sad';
+          emotion = 'sad';
+          lastSuggestion = 'sad' + suggestionIndex;
+        } else if (input.includes('thi cử') || input.includes('thi') || input.includes('kiểm tra')) {
+          reply = responses.examStress[suggestionIndex = Math.floor(Math.random() * responses.examStress.length)];
+          currentTopic = 'examStress';
+          emotion = 'worried';
+          lastSuggestion = 'examStress' + suggestionIndex;
+        } else if (input.includes('quá tải') || input.includes('ngập việc') || input.includes('nhiều quá')) {
+          reply = responses.overwhelmed[suggestionIndex = Math.floor(Math.random() * responses.overwhelmed.length)];
+          currentTopic = 'overwhelmed';
+          emotion = 'sad';
+          lastSuggestion = 'overwhelmed' + suggestionIndex;
+        } else if (input.includes('trì hoãn') || input.includes('lười') || input.includes('chưa bắt đầu')) {
+          reply = responses.procrastination[suggestionIndex = Math.floor(Math.random() * responses.procrastination.length)];
+          currentTopic = 'procrastination';
+          emotion = 'thinking';
+          lastSuggestion = 'procrastination' + suggestionIndex;
+        } else if (input.includes('môn toán') || input.includes('toán')) {
+          reply = responses.math[suggestionIndex = Math.floor(Math.random() * responses.math.length)];
+          currentTopic = 'math';
+          emotion = 'thinking';
+          lastSuggestion = 'math' + suggestionIndex;
+        } else if (input.includes('giải pháp') || input.includes('cách nào')) {
+          if (input.includes('học tập') || input.includes('học')) {
+            reply = responses.study[suggestionIndex = Math.floor(Math.random() * responses.study.length)];
+            currentTopic = 'study';
+            lastSuggestion = 'study' + suggestionIndex;
+          } else if (input.includes('căng thẳng') || input.includes('áp lực')) {
+            reply = responses.stress[suggestionIndex = Math.floor(Math.random() * responses.stress.length)];
+            currentTopic = 'stress';
+            lastSuggestion = 'stress' + suggestionIndex;
+          } else if (input.includes('quản lý thời gian') || input.includes('kế hoạch')) {
+            reply = responses.timeManagement[suggestionIndex = Math.floor(Math.random() * responses.timeManagement.length)];
+            currentTopic = 'timeManagement';
+            lastSuggestion = 'timeManagement' + suggestionIndex;
+          } else if (currentTopic === 'busy') {
+            reply = responses.busyAlt[suggestionIndex = Math.floor(Math.random() * responses.busyAlt.length)];
+            lastSuggestion = 'busyAlt' + suggestionIndex;
+          } else if (currentTopic === 'stress') {
+            reply = responses.stressAlt[suggestionIndex = Math.floor(Math.random() * responses.stressAlt.length)];
+            lastSuggestion = 'stressAlt' + suggestionIndex;
+          } else if (currentTopic === 'balance') {
+            reply = responses.balanceAlt[suggestionIndex = Math.floor(Math.random() * responses.balanceAlt.length)];
+            lastSuggestion = 'balanceAlt' + suggestionIndex;
+          } else if (currentTopic === 'tired') {
+            reply = responses.tiredAlt[suggestionIndex = Math.floor(Math.random() * responses.tiredAlt.length)];
+            lastSuggestion = 'tiredAlt' + suggestionIndex;
+          } else if (currentTopic === 'plan') {
+            reply = responses.planAlt[suggestionIndex = Math.floor(Math.random() * responses.planAlt.length)];
+            lastSuggestion = 'planAlt' + suggestionIndex;
+          } else if (currentTopic === 'relax') {
+            reply = responses.relaxAlt[suggestionIndex = Math.floor(Math.random() * responses.relaxAlt.length)];
+            lastSuggestion = 'relaxAlt' + suggestionIndex;
+          } else if (currentTopic === 'study') {
+            reply = responses.studyAlt[suggestionIndex = Math.floor(Math.random() * responses.studyAlt.length)];
+            lastSuggestion = 'studyAlt' + suggestionIndex;
+          } else if (currentTopic === 'motivation') {
+            reply = responses.motivationAlt[suggestionIndex = Math.floor(Math.random() * responses.motivationAlt.length)];
+            lastSuggestion = 'motivationAlt' + suggestionIndex;
+          } else if (currentTopic === 'focus') {
+            reply = responses.focusAlt[suggestionIndex = Math.floor(Math.random() * responses.focusAlt.length)];
+            lastSuggestion = 'focusAlt' + suggestionIndex;
+          } else if (currentTopic === 'schedule') {
+            reply = responses.scheduleAlt[suggestionIndex = Math.floor(Math.random() * responses.scheduleAlt.length)];
+            lastSuggestion = 'scheduleAlt' + suggestionIndex;
+          } else if (currentTopic === 'sad') {
+            reply = responses.sadAlt[suggestionIndex = Math.floor(Math.random() * responses.sadAlt.length)];
+            lastSuggestion = 'sadAlt' + suggestionIndex;
+          } else if (currentTopic === 'examStress') {
+            reply = responses.examStressAlt[suggestionIndex = Math.floor(Math.random() * responses.examStressAlt.length)];
+            lastSuggestion = 'examStressAlt' + suggestionIndex;
+          } else if (currentTopic === 'overwhelmed') {
+            reply = responses.overwhelmedAlt[suggestionIndex = Math.floor(Math.random() * responses.overwhelmedAlt.length)];
+            lastSuggestion = 'overwhelmedAlt' + suggestionIndex;
+          } else if (currentTopic === 'procrastination') {
+            reply = responses.procrastinationAlt[suggestionIndex = Math.floor(Math.random() * responses.procrastinationAlt.length)];
+            lastSuggestion = 'procrastinationAlt' + suggestionIndex;
+          } else if (currentTopic === 'math') {
+            reply = responses.mathAlt[suggestionIndex = Math.floor(Math.random() * responses.mathAlt.length)];
+            lastSuggestion = 'mathAlt' + suggestionIndex;
+          }
+        } else if (input.includes('có') || input.includes('được') || input.includes('ok') || input.includes('thử')) {
+          reply = responses.yes[0];
+          if (currentTopic === 'busy') {
+            reply += responses.busyAlt[suggestionIndex = Math.floor(Math.random() * responses.busyAlt.length)];
+            lastSuggestion = 'busyAlt' + suggestionIndex;
+          } else if (currentTopic === 'stress') {
+            reply += responses.stressAlt[suggestionIndex = Math.floor(Math.random() * responses.stressAlt.length)];
+            lastSuggestion = 'stressAlt' + suggestionIndex;
+          } else if (currentTopic === 'balance') {
+            reply += responses.balanceAlt[suggestionIndex = Math.floor(Math.random() * responses.balanceAlt.length)];
+            lastSuggestion = 'balanceAlt' + suggestionIndex;
+          } else if (currentTopic === 'tired') {
+            reply += responses.tiredAlt[suggestionIndex = Math.floor(Math.random() * responses.tiredAlt.length)];
+            lastSuggestion = 'tiredAlt' + suggestionIndex;
+          } else if (currentTopic === 'plan') {
+            reply += responses.planAlt[suggestionIndex = Math.floor(Math.random() * responses.planAlt.length)];
+            lastSuggestion = 'planAlt' + suggestionIndex;
+          } else if (currentTopic === 'relax') {
+            reply += responses.relaxAlt[suggestionIndex = Math.floor(Math.random() * responses.relaxAlt.length)];
+            lastSuggestion = 'relaxAlt' + suggestionIndex;
+          } else if (currentTopic === 'study') {
+            reply += responses.studyAlt[suggestionIndex = Math.floor(Math.random() * responses.studyAlt.length)];
+            lastSuggestion = 'studyAlt' + suggestionIndex;
+          } else if (currentTopic === 'motivation') {
+            reply += responses.motivationAlt[suggestionIndex = Math.floor(Math.random() * responses.motivationAlt.length)];
+            lastSuggestion = 'motivationAlt' + suggestionIndex;
+          } else if (currentTopic === 'focus') {
+            reply += responses.focusAlt[suggestionIndex = Math.floor(Math.random() * responses.focusAlt.length)];
+            lastSuggestion = 'focusAlt' + suggestionIndex;
+          } else if (currentTopic === 'schedule') {
+            reply += responses.scheduleAlt[suggestionIndex = Math.floor(Math.random() * responses.scheduleAlt.length)];
+            lastSuggestion = 'scheduleAlt' + suggestionIndex;
+          } else if (currentTopic === 'sad') {
+            reply += responses.sadAlt[suggestionIndex = Math.floor(Math.random() * responses.sadAlt.length)];
+            lastSuggestion = 'sadAlt' + suggestionIndex;
+          } else if (currentTopic === 'examStress') {
+            reply += responses.examStressAlt[suggestionIndex = Math.floor(Math.random() * responses.examStressAlt.length)];
+            lastSuggestion = 'examStressAlt' + suggestionIndex;
+          } else if (currentTopic === 'overwhelmed') {
+            reply += responses.overwhelmedAlt[suggestionIndex = Math.floor(Math.random() * responses.overwhelmedAlt.length)];
+            lastSuggestion = 'overwhelmedAlt' + suggestionIndex;
+          } else if (currentTopic === 'procrastination') {
+            reply += responses.procrastinationAlt[suggestionIndex = Math.floor(Math.random() * responses.procrastinationAlt.length)];
+            lastSuggestion = 'procrastinationAlt' + suggestionIndex;
+          } else if (currentTopic === 'math') {
+            reply += responses.mathAlt[suggestionIndex = Math.floor(Math.random() * responses.mathAlt.length)];
+            lastSuggestion = 'mathAlt' + suggestionIndex;
+          }
+        } else if (input.includes('chưa') || input.includes('không') || input.includes('không thích') || input.includes('không hợp')) {
+          reply = responses.no[Math.floor(Math.random() * responses.no.length)];
+          if (currentTopic === 'busy') {
+            const nextIndex = lastSuggestion === 'busy0' ? 1 : 0;
+            reply += responses.busyAlt[nextIndex];
+            lastSuggestion = 'busyAlt' + nextIndex;
+          } else if (currentTopic === 'stress') {
+            const nextIndex = lastSuggestion === 'stress0' ? 1 : 0;
+            reply += responses.stressAlt[nextIndex];
+            lastSuggestion = 'stressAlt' + nextIndex;
+          } else if (currentTopic === 'balance') {
+            const nextIndex = lastSuggestion === 'balance0' ? 1 : 0;
+            reply += responses.balanceAlt[nextIndex];
+            lastSuggestion = 'balanceAlt' + nextIndex;
+          } else if (currentTopic === 'tired') {
+            const nextIndex = lastSuggestion === 'tired0' ? 1 : 0;
+            reply += responses.tiredAlt[nextIndex];
+            lastSuggestion = 'tiredAlt' + nextIndex;
+          } else if (currentTopic === 'plan') {
+            const nextIndex = lastSuggestion === 'plan0' ? 1 : 0;
+            reply += responses.planAlt[nextIndex];
+            lastSuggestion = 'planAlt' + nextIndex;
+          } else if (currentTopic === 'relax') {
+            const nextIndex = lastSuggestion === 'relax0' ? 1 : 0;
+            reply += responses.relaxAlt[nextIndex];
+            lastSuggestion = 'relaxAlt' + nextIndex;
+          } else if (currentTopic === 'study') {
+            const nextIndex = lastSuggestion === 'study0' ? 1 : 0;
+            reply += responses.studyAlt[nextIndex];
+            lastSuggestion = 'studyAlt' + nextIndex;
+          } else if (currentTopic === 'motivation') {
+            const nextIndex = lastSuggestion === 'motivation0' ? 1 : 0;
+            reply += responses.motivationAlt[nextIndex];
+            lastSuggestion = 'motivationAlt' + nextIndex;
+          } else if (currentTopic === 'focus') {
+            const nextIndex = lastSuggestion === 'focus0' ? 1 : 0;
+            reply += responses.focusAlt[nextIndex];
+            lastSuggestion = 'focusAlt' + nextIndex;
+          } else if (currentTopic === 'schedule') {
+            const nextIndex = lastSuggestion === 'schedule0' ? 1 : 0;
+            reply += responses.scheduleAlt[nextIndex];
+            lastSuggestion = 'scheduleAlt' + nextIndex;
+          } else if (currentTopic === 'sad') {
+            const nextIndex = lastSuggestion === 'sad0' ? 1 : 0;
+            reply += responses.sadAlt[nextIndex];
+            lastSuggestion = 'sadAlt' + nextIndex;
+          } else if (currentTopic === 'examStress') {
+            const nextIndex = lastSuggestion === 'examStress0' ? 1 : 0;
+            reply += responses.examStressAlt[nextIndex];
+            lastSuggestion = 'examStressAlt' + nextIndex;
+          } else if (currentTopic === 'overwhelmed') {
+            const nextIndex = lastSuggestion === 'overwhelmed0' ? 1 : 0;
+            reply += responses.overwhelmedAlt[nextIndex];
+            lastSuggestion = 'overwhelmedAlt' + nextIndex;
+          } else if (currentTopic === 'procrastination') {
+            const nextIndex = lastSuggestion === 'procrastination0' ? 1 : 0;
+            reply += responses.procrastinationAlt[nextIndex];
+            lastSuggestion = 'procrastinationAlt' + nextIndex;
+          } else if (currentTopic === 'math') {
+            const nextIndex = lastSuggestion === 'math0' ? 1 : 0;
+            reply += responses.mathAlt[nextIndex];
+            lastSuggestion = 'mathAlt' + nextIndex;
+          }
+        }
+
+        chatbox.removeChild(chatbox.lastElementChild);
+        chatbox.innerHTML += `<p><strong>Mèo Thời Gian:</strong> ${reply}</p>`;
+        chatbox.scrollTop = chatbox.scrollHeight;
+        chatHistory.push(input);
+        if (chatHistory.length > 5) chatHistory.shift();
+        document.getElementById('userInput').value = '';
+        updateChatbotImage(emotion);
+      }, 1000);
+    }
+
+    function updateChatbotImage(emotion) {
+      const img = document.getElementById('chatbot-img');
+      if (emotion === 'happy') {
+        img.src = 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?q=80&w=100&auto=format&fit=crop';
+      } else if (emotion === 'sad') {
+        img.src = 'https://images.unsplash.com/photo-1596854407944-bf87f6fdd271?q=80&w=100&auto=format&fit=crop';
+      } else if (emotion === 'thinking') {
+        img.src = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=100&auto=format&fit=crop';
+      } else if (emotion === 'worried') {
+        img.src = 'https://images.unsplash.com/photo-1561948955-570b270e7c36?q=80&w=100&auto=format&fit=crop';
+      } else if (emotion === 'excited') {
+        img.src = 'https://images.unsplash.com/photo-1519336558455-92d701fd9324?q=80&w=100&auto=format&fit=crop';
+      }
+    }
+
+    // Biểu đồ và phản hồi
+    let feedbackCount = JSON.parse(localStorage.getItem('feedbackCount')) || { positive: 0, neutral: 0, negative: 0 };
+        let recentFeedback = JSON.parse(localStorage.getItem('recentFeedback')) || [];
+        const ctx = document.getElementById('feedbackChart').getContext('2d');
+        const chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Hài lòng', 'Bình thường', 'Chưa hài lòng'],
+            datasets: [{
+            label: 'Số lượng đánh giá',
+            data: [feedbackCount.positive, feedbackCount.neutral, feedbackCount.negative],
+            backgroundColor: ['#34D399', '#FBBF24', '#F87171']
+            }]
+        },
+        options: { scales: { y: { beginAtZero: true } } }
+        });
+
+        function submitFeedback() {
+        const feedback = document.getElementById('feedbackInput').value;
+        const rating = document.getElementById('feedbackRating').value;
+        if (!feedback) {
+            alert('Vui lòng nhập lời nhắn!');
+            return;
+        }
+
+        feedbackCount[rating]++;
+        recentFeedback.push({ text: feedback, rating });
+        if (recentFeedback.length > 5) recentFeedback.shift();
+        
+        localStorage.setItem('feedbackCount', JSON.stringify(feedbackCount));
+        localStorage.setItem('recentFeedback', JSON.stringify(recentFeedback));
+        chart.data.datasets[0].data = [feedbackCount.positive, feedbackCount.neutral, feedbackCount.negative];
+        chart.update();
+        renderRecentFeedback();
+        document.getElementById('feedbackInput').value = '';
+        }
+
+        function renderRecentFeedback() {
+        const feedbackDiv = document.getElementById('recentFeedback');
+        feedbackDiv.innerHTML = '<h4 class="text-lg font-semibold text-gray-800">Lời nhắn gần đây</h4>';
+        recentFeedback.forEach(fb => {
+            const div = document.createElement('div');
+            div.className = 'p-2 bg-gray-100 rounded mt-2';
+            div.textContent = `${fb.text} (${fb.rating === 'positive' ? 'Hài lòng' : fb.rating === 'neutral' ? 'Bình thường' : 'Chưa hài lòng'})`;
+            feedbackDiv.appendChild(div);
+        });
+        }
+        renderRecentFeedback();
+
+        // Tối ưu thao tác
+        function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+        }
+        window.addEventListener('resize', debounce(() => {
+        chart.resize();
+        calendar.render();
+        }, 100));
+    </script>
+    </body>
+    </html>
